@@ -3,21 +3,33 @@ class Player extends KinematicObject2D {
     super(x, y);
   }
 
-  OnCollision(objects) {
-    let { x, y } = this.velocity;
-    objects.forEach(object => {
-      if (object.object.GetName() == "LEFTWALL")
-        x = Math.abs(x);
-      if (object.object.GetName() == "RIGHTWALL")
-        x = -Math.abs(x);
-      if (object.object.GetName() == "TOPWALL")
-        y = Math.abs(y);
-      if (object.object.GetName() == "BOTTOMWALL")
-        y = -Math.abs(y);
-    });
+  OnCollisionBegin = (objects) => {
+    let vel = this.GetVelocity();
+    objects.forEach(item => {
+      const { object } = item;
+      if (!object.Name.includes('WALL'))
+        return;
 
-    this.SetVelocity(x, y);
+      if (object.Name.includes('BOTTOM') || object.Name.includes('TOP')) {
+        vel.y *= -1;
+      }
+
+      if (object.Name.includes('LEFT') || object.Name.includes('RIGHT')) {
+        vel.x *= -1;
+      }
+    });
+    this.SetVelocity(vel);
   }
+
+  WhileColliding(objects) {
+    //console.log('colliding');
+
+  }
+
+  OnCollisionEnd(objects) {
+    //console.log('collision end');
+  }
+  
 }
 
 class Wall extends GameObject2D {
@@ -34,17 +46,23 @@ class Wall extends GameObject2D {
 class Scene {
   constructor() {
     this.count = 0;
+    this.objects = [];
   }
 
   AddToScene = (object) => {
     this.objects.push(object);
   }
 
-  CreateScene() {
+  // Method will reset the current scene to original
+  ResetScene() {
     this.objects = [];
-    PhysicsEngine.Gravity = createVector(0, 300);
+    this.CreateScene();
+  }
+
+  CreateScene() {
+    this.players = [];
+    PhysicsEngine.Gravity = createVector(0, 200);
     const position = createVector(width / 2, height / 2);
-    const players = [];
     const playerStyle = new Box2D(100);
     playerStyle.SetColor(200, 200, 200);
 
@@ -61,9 +79,9 @@ class Scene {
       velocity.mult(200);
 
       player.SetVelocity(velocity.x, velocity.y);
-      player.SetAngularVelocity(PI / 360);
+      // player.SetAngularVelocity(PI / 360);
 
-      players.push(player);
+      this.players.push(player);
     }
 
     const wallLeft = new Wall(5, height / 2);
@@ -79,10 +97,10 @@ class Scene {
     topWall.SetName('TOPWALL');
 
     const wallBottom = new Wall(width / 2, height - 5);
-    wallBottom.SetCollisionProps(width * 2, 5);
+    wallBottom.SetCollisionProps(width * 2, 50);
     wallBottom.SetName('BOTTOMWALL');
 
-    players.forEach(this.AddToScene);
+    this.players.forEach(this.AddToScene);
 
   }
 
@@ -91,11 +109,6 @@ class Scene {
 
   //Handles drawing of objects
   Render() {
-    this.count++;
-    if (this.count % 500 == 0) {
-      SceneManager.SetScene("Level1");
-      SceneManager.ResetScene();
-    }
     background(51);
     this.objects.forEach(gameObject => {
       gameObject.Draw();
@@ -113,5 +126,3 @@ class Scene {
 }
 
 SceneManager.AddScene("MainScene", new Scene());
-SceneManager.AddScene("Level1", new Scene());
-SceneManager.SetScene("MainScene");

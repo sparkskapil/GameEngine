@@ -7,6 +7,7 @@ function setup() {
   PhysicsEngine = new PhysicsGlobal();
 
   SceneManager.CreateScenes();
+  SceneManager.SetScene("MainScene");
 }
 
 function draw() {
@@ -14,6 +15,6 @@ function draw() {
   if (!Scene)
     throw new Error('No Scene was set to render.');
   Scene.Render();
-  Scene.Update(deltaTime / 1000);
   PhysicsEngine.ComputeAndNotifyCollisions();
+  Scene.Update(deltaTime / 1000);
 }

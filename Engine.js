@@ -8,6 +8,14 @@ let PhysicsEngine = null;
 // 4. Try shaders
 // 5. Testing Sprites
 // 6. Implement Camera using easycam
+// 7. Particle system
+
+/* Priority Checklist
+  1. Circular Collider
+  2. Sprites
+  3. Text Drawable
+  4. Particles
+*/
 
 class PhysicsGlobal {
   static COLLIDERS = 0;
@@ -17,6 +25,34 @@ class PhysicsGlobal {
   constructor() {
     this.Gravity = createVector(0, 0);
     this.CollidersMap = {};
+    this.CollidingBodies = {};
+  }
+
+  static GetEdgesIntersection(E1, E2) {
+    //Line representing E1
+    const a1 = E1.B.y - E1.A.y;
+    const b1 = E1.A.x - E1.B.x;
+    const c1 = E1.A.x * a1 + E1.A.y * b1;
+
+    //Line representing E2
+    const a2 = E2.B.y - E2.A.y;
+    const b2 = E2.A.x - E2.B.x;
+    const c2 = E2.A.x * a2 + E2.A.y * b2;
+
+    const determinant = a1 * b2 - a2 * b1;
+
+    if (determinant == 0)
+      return null;
+
+    const x = (b2 * c1 - b1 * c2) / determinant;
+    const y = (a1 * c2 - a2 * c1) / determinant;
+    return createVector(x, y);
+
+  }
+
+  Clear() {
+    this.CollidersMap = {};
+    PhysicsGlobal.COLLIDERS = 0;
   }
 
   RegisterCollider(collider) {
@@ -25,6 +61,10 @@ class PhysicsGlobal {
     if (!this.CollidersMap[layer])
       this.CollidersMap[layer] = {};
     this.CollidersMap[layer][collider.id] = collider;
+  }
+
+  ComputeAndNotifyCollisions() {
+    Object.keys(this.CollidersMap).forEach(this._processCollisionPerLayer)
   }
 
   _getCentroid(vertices) {
@@ -49,28 +89,6 @@ class PhysicsGlobal {
     ];
 
     return edges;
-  }
-
-  static GetEdgesIntersection(E1, E2) {
-    //Line representing E1
-    const a1 = E1.B.y - E1.A.y;
-    const b1 = E1.A.x - E1.B.x;
-    const c1 = E1.A.x * a1 + E1.A.y * b1;
-
-    //Line representing E2
-    const a2 = E2.B.y - E2.A.y;
-    const b2 = E2.A.x - E2.B.x;
-    const c2 = E2.A.x * a2 + E2.A.y * b2;
-
-    const determinant = a1 * b2 - a2 * b1;
-
-    if (determinant == 0)
-      return null;
-
-    const x = (b2 * c1 - b1 * c2) / determinant;
-    const y = (a1 * c2 - a2 * c1) / determinant;
-    return createVector(x, y);
-
   }
 
   _calculateAxis(B1, B2, Overlap) {
@@ -130,7 +148,11 @@ class PhysicsGlobal {
     if (x1 > x2 || y1 > y2)
       return null;
 
-    return this._calculateAxis(B1, B2, { min: { x: x1, y: y1 }, max: { x: x2, y: y2 } });
+    const overlap = { min: { x: x1, y: y1 }, max: { x: x2, y: y2 } };
+    const axis = this._calculateAxis(B1, B2, overlap);
+    if (!axis)
+      return { axis, overlap: null };
+    return { axis, overlap };
   }
 
   //Checks whether the colliders intersect with the axis.
@@ -206,9 +228,11 @@ class PhysicsGlobal {
         if (collider1.isStatic && collider2.isStatic)
           continue;
 
-        const axis = this._isAABBColliding(box[i], box[j]);
-        if (!axis)
+        const result = this._isAABBColliding(box[i], box[j]);
+
+        if (!result)
           continue;
+        const { axis, overlap } = result;
 
         const res = this._areCollidersColliding(collider1, collider2, axis);
 
@@ -221,24 +245,106 @@ class PhysicsGlobal {
         if (!collisionMap[c2])
           collisionMap[c2] = [];
 
-        collisionMap[c1].push({ object: collider2.gameObject, axis });
-        collisionMap[c2].push({ object: collider1.gameObject, axis });
+        //this._resolveAndCacheCollision(collider1.gameObject, collider2.gameObject, overlap);
+
+        collisionMap[c1].push({ id: collider2.id, object: collider2.gameObject, axis });
+        collisionMap[c2].push({ id: collider1.id, object: collider1.gameObject, axis });
       }
     }
 
     // Notify all colliders about colliding game objects.
-    Object.keys(this.CollidersMap[layer]).forEach((id) => {
-      const collider = this.CollidersMap[layer][id];
-      if (!collisionMap[id])
-        return;
-      collider.OnCollision(collisionMap[id]);
+    this._notifyAndCacheCollisions(this.CollidingBodies[layer], collisionMap, this.CollidersMap[layer], layer);
+
+    // Object.keys(this.CollidersMap[layer]).forEach((id) => {
+    //   const collider = this.CollidersMap[layer][id];
+    //   if (!collisionMap[id])
+    //     return;
+    //   collider.OnCollision(collisionMap[id]);
+    // });
+  }
+
+  _getNewOldCommonCollisions(prev, next) {
+    if (!prev)
+      prev = [];
+    if (!next)
+      next = [];
+    const colNew = [];
+    const colCommon = [];
+    const colOld = [...prev];
+    next.forEach(newItem => {
+      const index = prev.findIndex(oldItem => oldItem.id == newItem.id);
+      if (index > -1) {
+        colCommon.push(newItem);
+        colOld.splice(index, 1);
+      }
+      else {
+        colNew.push(newItem);
+      }
     });
-
+    return { colNew, colCommon, colOld };
   }
 
-  ComputeAndNotifyCollisions() {
-    Object.keys(this.CollidersMap).forEach(this._processCollisionPerLayer)
+  _notifyAndCacheCollisions = (prev, next, colliders, layer) => {
+    if (!prev)
+      prev = {};
+    const ids = Object.keys(colliders);
+    ids.forEach(id => {
+      const collider = colliders[id];
+      const { colNew, colCommon, colOld } = this._getNewOldCommonCollisions(prev[id], next[id]);
+
+      collider.CollisionBegin(colNew);
+      collider.Colliding(colCommon);
+      collider.CollisionEnd(colOld);
+    });
+    this.CollidingBodies[layer] = next;
   }
+
+  // Not used but might be useful when working with forces
+  _resolveAndCacheCollision(firstGO, secondGO, overlap) {
+    if (!overlap)
+      return;
+    const u = !firstGO.GetVelocity ? createVector(0, 0) : firstGO.GetVelocity();
+    const v = !secondGO.GetVelocity ? createVector(0, 0) : secondGO.GetVelocity();
+
+    const movement = createVector(overlap.max.x - overlap.min.x, overlap.max.y - overlap.min.y);
+
+    if (!u || !v)
+      return;
+
+    //If both objects are non static
+    if (firstGO.SetVelocity && secondGO.SetVelocity) {
+      firstGO.SetVelocity(v);
+      secondGO.SetVelocity(u);
+      movement *= (0.5);
+      const firstMovementDir = u.normalize().mult(-1);
+      const secondMovementDir = v.normalize().mult(-1);
+
+      const firstMove = createVector(firstMovementDir.x * movement.x, firstMovementDir.y * movement.y);
+      const secondMove = createVector(secondMovementDir.x * movement.x, secondMovementDir.y * movement.y);
+
+      const firstPos = p5.Vector.add(firstGO.GetPosition(), firstMove);
+      const secondPos = p5.Vector.add(secondGO.GetPosition(), secondMove);
+      firstGO.SetPosition(firstPos);
+      secondGO.SetPosition(secondPos);
+    }
+    else if (firstGO.SetVelocity) {
+      firstGO.SetVelocity(v);
+
+      const firstMovementDir = u.normalize().mult(-1);
+      const firstMove = createVector(firstMovementDir.x * movement.x, firstMovementDir.y * movement.y);
+      const firstPos = p5.Vector.add(firstGO.GetPosition(), firstMove);
+      firstGO.SetPosition(firstPos);
+    }
+    else if (secondGO.SetVelocity) {
+      secondGO.SetVelocity(u);
+      const secondMovementDir = v.normalize().mult(-1);
+
+      const secondMove = createVector(secondMovementDir.x * movement.x, secondMovementDir.y * movement.y);
+      const secondPos = p5.Vector.add(secondGO.GetPosition(), secondMove);
+      secondGO.SetPosition(secondPos);
+    }
+  }
+
 }
 
 class GameObject {
@@ -358,7 +464,7 @@ class GameObject2D extends GameObject {
   }
 
   GetPosition() {
-    return Object.freeze({ x: this.x, y: this.y });
+    return createVector(this.x, this.y);
   }
 
   SetPosition(first, second) {
@@ -417,13 +523,19 @@ class KinematicObject2D extends GameObject2D {
   SetVelocity(first, second) {
     if (first instanceof p5.Vector)
       this.velocity = createVector(first.x, first.y);
-    this.velocity = createVector(first, second);
+    else
+      this.velocity = createVector(first, second);
+  }
+
+  GetVelocity() {
+    return createVector(this.velocity.x, this.velocity.y);
   }
 
   SetAcceleration(first, second) {
     if (first instanceof p5.Vector)
       this.acceleration = createVector(first.x, first.y);
-    this.acceleration = createVector(first, second);
+    else
+      this.acceleration = createVector(first, second);
   }
 
   Update(delta) {
@@ -477,10 +589,10 @@ class BoxCollider2D {
 
   Attach(gameObject) {
     this.gameObject = gameObject;
-    PhysicsEngine.RegisterCollider(this);
-    if (gameObject.__proto__.constructor.name == "GameObject2D") {
+    if (gameObject.__proto__.__proto__.constructor.name == "GameObject2D") {
       this.isStatic = true;
     }
+    PhysicsEngine.RegisterCollider(this);
   }
 
   IsPointInside(point) {
@@ -586,12 +698,42 @@ class BoxCollider2D {
     return Object.freeze({ min, max });
   }
 
-  OnCollision(objects) {
-    if (!this.gameObject.OnCollision)
+  CollisionBegin(objects) {
+    if (!this.gameObject.OnCollisionBegin)
       return;
 
-    this.gameObject.OnCollision(objects);
+    if (!objects || !objects.length)
+      return;
+
+    this.gameObject.OnCollisionBegin(objects);
   }
+
+  Colliding(objects) {
+    if (!this.gameObject.WhileColliding)
+      return;
+
+    if (!objects || !objects.length)
+      return;
+
+    this.gameObject.WhileColliding(objects);
+  }
+
+  CollisionEnd(objects) {
+    if (!this.gameObject.OnCollisionEnd)
+      return;
+
+    if (!objects || !objects.length)
+      return;
+
+    this.gameObject.OnCollisionEnd(objects);
+  }
+
+  // OnCollision(objects) {
+  //   if (!this.gameObject.OnCollision)
+  //     return;
+
+  //   this.gameObject.OnCollision(objects);
+  // }
 
 }
 
@@ -608,13 +750,12 @@ class SceneManager {
   static SetScene(key) {
     if (!SceneManager.Scenes[key])
       throw new Error(`${key} does not exist.`);
-    SceneManager.CurrentScene = SceneManager.Scenes[key];
-  }
 
-  static ResetScene() {
-    if (!SceneManager.CurrentScene)
-      throw new Error('Current Scene not set.');
-    SceneManager.CurrentScene.CreateScene();
+    SceneManager.CurrentScene = SceneManager.Scenes[key];
+    if (PhysicsEngine) {
+      PhysicsEngine.Clear();
+      SceneManager.CurrentScene.ResetScene();
+    }
   }
 
   static LoadAssets() {
