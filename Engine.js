@@ -254,13 +254,6 @@ class PhysicsGlobal {
 
     // Notify all colliders about colliding game objects.
     this._notifyAndCacheCollisions(this.CollidingBodies[layer], collisionMap, this.CollidersMap[layer], layer);
-
-    // Object.keys(this.CollidersMap[layer]).forEach((id) => {
-    //   const collider = this.CollidersMap[layer][id];
-    //   if (!collisionMap[id])
-    //     return;
-    //   collider.OnCollision(collisionMap[id]);
-    // });
   }
 
   _getNewOldCommonCollisions(prev, next) {
