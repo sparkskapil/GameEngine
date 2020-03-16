@@ -29,7 +29,7 @@ class Player extends KinematicObject2D {
   OnCollisionEnd(objects) {
     //console.log('collision end');
   }
-  
+
 }
 
 class Wall extends GameObject2D {
@@ -63,8 +63,8 @@ class Scene {
     this.players = [];
     PhysicsEngine.Gravity = createVector(0, 200);
     const position = createVector(width / 2, height / 2);
-    const playerStyle = new Box2D(100);
-    playerStyle.SetColor(200, 200, 200);
+    const playerStyle = new Sprite(AssetManager.GetLoadedImage('player'), 100);
+    //playerStyle.SetColor(200, 200, 200);
 
     for (let i = 0; i < 1; i++) {
       const player = new Player(0, 0);
@@ -105,6 +105,8 @@ class Scene {
   }
 
   LoadAssets() {
+    AssetManager.ImportImage('player', './assets/player.png');
+    AssetManager.LoadAssets();
   }
 
   //Handles drawing of objects

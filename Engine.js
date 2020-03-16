@@ -12,10 +12,58 @@ let PhysicsEngine = null;
 
 /* Priority Checklist
   1. Circular Collider
-  2. Sprites
+------------------    2. Sprites          
   3. Text Drawable
   4. Particles
 */
+
+class AssetManager {
+  static _instance = new AssetManager();
+
+  constructor() {
+    this.images = {};
+  }
+
+  _importImage(key, path) {
+    if (this.images[key])
+      throw new Error(`The key ${key} is already used for another image.`);
+    this.images[key] = { path, image: null };
+  }
+
+  _setImage(key, imageData) {
+    if (!this.images[key])
+      throw new Error(`The key ${key} does not exist.`);
+    this.images[key].image = imageData;
+  }
+
+  _getImage(key) {
+    if (!this.images[key])
+      throw new Error(`The key ${key} does not exist.`);
+    return this.images[key];
+  }
+
+  _getAllImages() {
+    return Object.keys(this.images).map(key => {
+      return { ...this.images[key], key };
+    });
+  }
+
+  static ImportImage(imageKey, imagePath) {
+    AssetManager._instance._importImage(imageKey, imagePath);
+  }
+
+  static GetLoadedImage(imageKey) {
+    return AssetManager._instance._getImage(imageKey).image;
+  }
+
+  static LoadAssets() {
+    const images = AssetManager._instance._getAllImages();
+    images.forEach(img => {
+      loadImage(img.path, image => AssetManager._instance._setImage(img.key, image));
+    })
+  }
+
+}
 
 class PhysicsGlobal {
   static COLLIDERS = 0;
@@ -391,7 +439,7 @@ class Sprite extends Drawable {
   }
 
   Draw() {
-    image(this.image);
+    image(this.image, 0, 0, this.width, this.height);
   }
 }
 
