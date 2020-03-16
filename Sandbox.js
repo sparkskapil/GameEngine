@@ -105,7 +105,7 @@ class Scene {
   }
 
   LoadAssets() {
-    AssetManager.ImportImage('player', './assets/player.png');
+    AssetManager.ImportImage('player', './assets/flappy.png');
     AssetManager.LoadAssets();
   }
 

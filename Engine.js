@@ -436,10 +436,15 @@ class Sprite extends Drawable {
     this.image = loadedImage;
     this.width = width;
     this.height = height;
+    if (!this.height)
+      this.height = this.width;
   }
 
   Draw() {
+    push();
+    imageMode(CENTER)
     image(this.image, 0, 0, this.width, this.height);
+    pop();
   }
 }
 
