@@ -15,6 +15,10 @@ let PhysicsEngine = null;
 ------------------    2. Sprites          
   3. Text Drawable
   4. Particles
+  5. Event System
+------------------    6. Animated Sprites
+  7. Multiple Colliders on Single GameObject
+  8. Remove Collider if object is removed from scene
 */
 
 class AssetManager {
@@ -444,6 +448,62 @@ class Sprite extends Drawable {
     push();
     imageMode(CENTER)
     image(this.image, 0, 0, this.width, this.height);
+    pop();
+  }
+}
+
+class AnimatedSprite extends Drawable {
+  constructor(loadedImage, width, height) {
+    super();
+    this.image = loadedImage;
+    this.width = width;
+    this.height = height;
+
+    this.frames = []
+
+    this.currentFrame = 0;
+
+    this.playing = true;
+
+    this.frameCount = 0;
+    this.animationSpeed = 0.1;
+
+    if (!this.height)
+      this.height = this.width;
+  }
+
+  SetFrame(key, position) {
+    this.frames.push({ key, position });
+    this.endFrameIndex++;
+  }
+
+  SetFrames(frames) {
+    this.frames = [...frames];
+  }
+
+  SetAnimationSpeed(speed) {
+    this.animationSpeed = speed;
+  }
+
+  StopAnimation() {
+    this.playing = false;
+  }
+
+  Draw() {
+    let index = 0;
+    if (this.playing) {
+      ++this.frameCount;
+      this.frameCount %= Number.MAX_VALUE;
+
+      index = floor(this.frameCount * this.animationSpeed) % this.frames.length;
+    }
+
+    const { x, y, w, h } = this.frames[index].position;
+    const sprite = this.image.get(x, y, w, h);
+
+    push();
+    imageMode(CENTER);
+    image(sprite, 0, 0, w, h);
     pop();
   }
 }
