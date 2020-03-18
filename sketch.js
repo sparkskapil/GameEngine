@@ -18,3 +18,13 @@ function draw() {
   PhysicsEngine.ComputeAndNotifyCollisions();
   Scene.Update(deltaTime / 1000);
 }
+
+function keyPressed() {
+  const Scene = SceneManager.GetScene();
+  Scene.KeyPressed({ key, keyCode });
+}
+
+function keyReleased() {
+  const Scene = SceneManager.GetScene();
+  Scene.KeyReleased({ key, keyCode });
+}

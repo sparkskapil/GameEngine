@@ -1,33 +1,71 @@
 class Player extends KinematicObject2D {
   constructor(x, y) {
     super(x, y);
+    this.SetVelocity(0, 50);
+
+    this.started = false;
+    this.dead = false;
+  }
+
+  Draw() {
+    super.Draw();
+  }
+
+  Update(delta) {
+    super.Update(delta);
+
+    // oscillate bird when game is not started
+    if (!this.basePosition)
+      this.basePosition = createVector(this.x, this.y);
+    if (!this.started && !this.dead) {
+      if (Math.abs(this.y - this.basePosition.y) > 15)
+        this.velocity.y = this.velocity.y * -1;
+    }
+
+    if (!this.started)
+      return;
+
+    if (this.velocity.y > 0)
+      this.SetRotation(PI / 6);
+    else if (this.velocity.y < 0)
+      this.SetRotation(-PI / 3);
+  }
+
+  IsDead() {
+    return this.dead;
+  }
+
+  Restart() {
+    this.dead = false;
+    this.started = false;
   }
 
   OnCollisionBegin = (objects) => {
-    let vel = this.GetVelocity();
-    objects.forEach(item => {
-      const { object } = item;
-      if (!object.Name.includes('WALL'))
-        return;
-
-      if (object.Name.includes('BOTTOM') || object.Name.includes('TOP')) {
-        vel.y *= -1;
-      }
-
-      if (object.Name.includes('LEFT') || object.Name.includes('RIGHT')) {
-        vel.x *= -1;
-      }
-    });
-    this.SetVelocity(vel);
+    this.dead = true;
+    this.SetVelocity(0, 0);
+    this.SetAcceleration(0, 0);
+    this.SetAngularVelocity(0);
+    this.Drawable.StopAnimation();
   }
 
   WhileColliding(objects) {
-    //console.log('colliding');
-
   }
 
   OnCollisionEnd(objects) {
-    //console.log('collision end');
+  }
+
+  KeyPressed(event) {
+    //Game started
+    if (!this.started && !this.dead) {
+      this.started = true;
+      this.SetAcceleration(0, 800);
+    }
+    if (!this.dead)
+      this.SetVelocity(0, -400);
+  }
+
+  KeyReleased(event) {
+
   }
 
 }
@@ -43,14 +81,52 @@ class Wall extends GameObject2D {
   }
 }
 
+class Pipe extends KinematicObject2D {
+
+  static GetWidth() {
+    return 600;
+  }
+
+  static GetHeight() {
+    return 3 * height / 4;
+  }
+
+  constructor(x, y, isTop) {
+    super(x, y);
+    this.width = Pipe.GetWidth();
+    this.height = Pipe.GetHeight();
+
+    const pipeStyle = new Sprite(AssetManager.GetLoadedImage('pipe'), this.width, this.height);
+    this.SetDrawable(pipeStyle);
+
+    if (!isTop) {
+      this.SetRotation(PI);
+    }
+    this.SetVelocity(-50, 0);
+  }
+
+}
+
+class Background extends GameObject2D {
+  constructor(x, y) {
+    super(x, y);
+  }
+}
+
 class Scene {
   constructor() {
     this.count = 0;
     this.objects = [];
+    this.player = null;
+    this.pipes = [];
   }
 
   AddToScene = (object) => {
     this.objects.push(object);
+  }
+
+  RemoveFromScene = (object) => {
+    const index = this.objects.findIndex(obj => object.GetName() === obj.GetName())
   }
 
   // Method will reset the current scene to original
@@ -59,53 +135,93 @@ class Scene {
     this.CreateScene();
   }
 
-  CreateScene() {
-    this.players = [];
-    PhysicsEngine.Gravity = createVector(0, 200);
+  CreateBG() {
     const position = createVector(width / 2, height / 2);
-    const playerStyle = new Sprite(AssetManager.GetLoadedImage('player'), 100);
-    //playerStyle.SetColor(200, 200, 200);
+    const backgroundImage = new Sprite(AssetManager.GetLoadedImage('background'), width, height);
+    const background = new Background(0, 0);
 
-    for (let i = 0; i < 1; i++) {
-      const player = new Player(0, 0);
+    background.SetDrawable(backgroundImage);
+    background.SetPosition(position);
+    this.AddToScene(background);
+  }
 
-      const collider = new BoxCollider2D(0, 0, 100, 100);
-      collider.Attach(player);
+  CreatePlayer() {
+    const position = createVector(width / 4 + 150, height / 2);
+    //const playerStyle = new Sprite(AssetManager.GetLoadedImage('player'), 100);
+    const playerStyle = new AnimatedSprite(AssetManager.GetLoadedImage('bird'), 276, 64);
+    const frames = [
+      {
+        key: 'frame_0',
+        position: {
+          x: 0,
+          y: 0,
+          w: 91,
+          h: 64
+        }
+      },
+      {
+        key: 'frame_1',
+        position: {
+          x: 92,
+          y: 0,
+          w: 91,
+          h: 64
+        }
+      },
+      {
+        key: 'frame_2',
+        position: {
+          x: 184,
+          y: 0,
+          w: 91,
+          h: 64
+        }
+      }
+    ];
+    playerStyle.SetFrames(frames);
+    playerStyle.SetAnimationSpeed(0.1);
+    this.player = new Player(0, 0);
+    const collider = new BoxCollider2D(0, 0, 50, 50);
+    collider.Attach(this.player);
 
-      player.SetDrawable(playerStyle);
-      player.SetPosition(position);
+    this.player.SetDrawable(playerStyle);
+    this.player.SetPosition(position);
+    this.AddToScene(this.player);
+  }
 
-      const velocity = createVector(0.35, -1)//p5.Vector.fromAngle(random(0, 2 * PI));
-      velocity.mult(200);
-
-      player.SetVelocity(velocity.x, velocity.y);
-      // player.SetAngularVelocity(PI / 360);
-
-      this.players.push(player);
+  CreatePipes() {
+    for (let i = 0; i < 5; i++) {
+      this.CreatePipe(width / 4 + i * 400 + Pipe.GetWidth(), height / 2 + random(-1, 1) * 200, 200);
     }
+  }
 
-    const wallLeft = new Wall(5, height / 2);
-    wallLeft.SetCollisionProps(5, height * 2);
-    wallLeft.SetName('LEFTWALL');
+  CreatePipe(x, y, gap) {
+    const pipeTop = new Pipe(0, 0);
+    const pipeBottom = new Pipe(0, 0, true);
 
-    const wallRight = new Wall(width - 5, height / 2);
-    wallRight.SetCollisionProps(5, height * 2);
-    wallRight.SetName('RIGHTWALL');
+    pipeTop.SetPosition(x, y - Pipe.GetHeight() / 2 - gap / 2);
+    pipeBottom.SetPosition(x, y + Pipe.GetHeight() / 2 + gap / 2);
 
-    const topWall = new Wall(width / 2, 5);
-    topWall.SetCollisionProps(width * 2, 5);
-    topWall.SetName('TOPWALL');
+    this.AddToScene(pipeTop);
+    this.AddToScene(pipeBottom);
+
+  }
+
+  CreateScene() {
+    this.CreateBG();
+    this.CreatePipes();
+    this.CreatePlayer();
 
     const wallBottom = new Wall(width / 2, height - 5);
     wallBottom.SetCollisionProps(width * 2, 50);
     wallBottom.SetName('BOTTOMWALL');
-
-    this.players.forEach(this.AddToScene);
-
   }
 
   LoadAssets() {
     AssetManager.ImportImage('player', './assets/flappy.png');
+    AssetManager.ImportImage('bird', './assets/bird.png');
+    AssetManager.ImportImage('background', './assets/background.png');
+    AssetManager.ImportImage('pipe', './assets/pipe.png');
     AssetManager.LoadAssets();
   }
 
@@ -125,6 +241,16 @@ class Scene {
       }
     });
   }
+
+  //KeyEvents
+  KeyPressed(event) {
+    this.objects.forEach(gameObject => gameObject.KeyPressed ? gameObject.KeyPressed(event) : null);
+  }
+
+  KeyReleased(event) {
+    this.objects.forEach(gameObject => gameObject.keyReleased ? gameObject.KeyReleased(event) : null);
+  }
 }
 
 SceneManager.AddScene("MainScene", new Scene());
+
