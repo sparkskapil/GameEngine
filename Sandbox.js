@@ -84,7 +84,7 @@ class Wall extends GameObject2D {
 class Pipe extends KinematicObject2D {
 
   static GetWidth() {
-    return 600;
+    return 100;
   }
 
   static GetHeight() {
@@ -95,7 +95,6 @@ class Pipe extends KinematicObject2D {
     super(x, y);
     this.width = Pipe.GetWidth();
     this.height = Pipe.GetHeight();
-
     const pipeStyle = new Sprite(AssetManager.GetLoadedImage('pipe'), this.width, this.height);
     this.SetDrawable(pipeStyle);
     this.velocity = -100
@@ -119,7 +118,7 @@ class Scene {
     this.count = 0;
     this.objects = [];
     this.player = null;
-    this.pipes = [];
+    this.pipesCount = 5;
   }
 
   AddToScene = (object) => {
@@ -128,6 +127,7 @@ class Scene {
 
   RemoveFromScene = (object) => {
     const index = this.objects.findIndex(obj => object.GetName() === obj.GetName())
+    this.objects.splice(index, 1);
   }
 
   // Method will reset the current scene to original
@@ -187,11 +187,10 @@ class Scene {
     this.player.SetDrawable(playerStyle);
     this.player.SetPosition(position);
     this.AddToScene(this.player);
-    this.pipes = []
   }
 
   CreatePipes() {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < this.pipesCount; i++) {
       this.CreatePipe(width / 4 + i * 400 + Pipe.GetWidth(), height / 2 + random(-1, 1) * 200, 200);
     }
   }
@@ -202,18 +201,16 @@ class Scene {
 
     pipeTop.SetPosition(x, y - Pipe.GetHeight() / 2 - gap / 2);
     pipeBottom.SetPosition(x, y + Pipe.GetHeight() / 2 + gap / 2);
-    this.pipes.push({ Top: pipeTop, Bottom: pipeBottom })
     this.AddToScene(pipeTop);
     this.AddToScene(pipeBottom);
-
   }
 
   IsPipeOffscreen(pipe) {
-    const position = pipe.Top.GetPosition()
-    const width = pipe.GetWidth()
+    const position = pipe.GetPosition()
+    const width = pipe.width
     if (!position || !width)
       return true;
-    if (position.x + width < 0)
+    if ((position.x + width / 2) < 0)
       return true;
     return false;
   }
@@ -237,22 +234,28 @@ class Scene {
   }
 
   OnUpdate() {
-    let pipe = null;
-    for (let i = 0; i < this.pipes.length; i++) {
-      if (this.IsPipeOffscreen(this.pipes[i])) {
-        pipe = this.pipes[i];
-        this.pipes.splice(i, 1);
+    let pipes = [];
+    for (let i = 0; i < this.objects.length; i++) {
+      if ((this.objects[i] instanceof Pipe) == false)
+        continue;
+      if (this.IsPipeOffscreen(this.objects[i])) {
+        pipes.push(this.objects[i]);
+      }
+    }
+    if (!pipes.length) return;
+
+    for (let i = 0; i < pipes.length; i++) {
+      this.RemoveFromScene(pipes[i])
+    }
+
+    let lastPipe = null;
+    for (let i = this.objects.length - 1; i >= 0; i--) {
+      if (this.objects[i] instanceof Pipe) {
+        lastPipe = this.objects[i];
         break;
       }
     }
-    if(!pipe) return;
-    for (let i = 0; i < this.objects.length; i++) {
-      if(this.objects[i] == pipe.Top || this.objects[i] == this.objects[i].Bottom)
-        this.objects.splice(i,1);
-    }
-
-    this.CreatePipe(width / 4 + this.pipes.length * 400 + Pipe.GetWidth(), height / 2 + random(-1, 1) * 200, 200);
-
+    this.CreatePipe(lastPipe.GetPosition().x + 400 + Pipe.GetWidth(), height / 2 + random(-1, 1) * 200, 200);
   }
 
   //Handles drawing of objects
