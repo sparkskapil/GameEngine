@@ -98,11 +98,12 @@ class Pipe extends KinematicObject2D {
 
     const pipeStyle = new Sprite(AssetManager.GetLoadedImage('pipe'), this.width, this.height);
     this.SetDrawable(pipeStyle);
+    this.velocity = -100
 
     if (!isTop) {
       this.SetRotation(PI);
     }
-    this.SetVelocity(-50, 0);
+    this.SetVelocity(this.velocity, 0);
   }
 
 }
@@ -147,7 +148,6 @@ class Scene {
 
   CreatePlayer() {
     const position = createVector(width / 4 + 150, height / 2);
-    //const playerStyle = new Sprite(AssetManager.GetLoadedImage('player'), 100);
     const playerStyle = new AnimatedSprite(AssetManager.GetLoadedImage('bird'), 276, 64);
     const frames = [
       {
@@ -187,6 +187,7 @@ class Scene {
     this.player.SetDrawable(playerStyle);
     this.player.SetPosition(position);
     this.AddToScene(this.player);
+    this.pipes = []
   }
 
   CreatePipes() {
@@ -201,10 +202,20 @@ class Scene {
 
     pipeTop.SetPosition(x, y - Pipe.GetHeight() / 2 - gap / 2);
     pipeBottom.SetPosition(x, y + Pipe.GetHeight() / 2 + gap / 2);
-
+    this.pipes.push({ Top: pipeTop, Bottom: pipeBottom })
     this.AddToScene(pipeTop);
     this.AddToScene(pipeBottom);
 
+  }
+
+  IsPipeOffscreen(pipe) {
+    const position = pipe.Top.GetPosition()
+    const width = pipe.GetWidth()
+    if (!position || !width)
+      return true;
+    if (position.x + width < 0)
+      return true;
+    return false;
   }
 
   CreateScene() {
@@ -225,6 +236,25 @@ class Scene {
     AssetManager.LoadAssets();
   }
 
+  OnUpdate() {
+    let pipe = null;
+    for (let i = 0; i < this.pipes.length; i++) {
+      if (this.IsPipeOffscreen(this.pipes[i])) {
+        pipe = this.pipes[i];
+        this.pipes.splice(i, 1);
+        break;
+      }
+    }
+    if(!pipe) return;
+    for (let i = 0; i < this.objects.length; i++) {
+      if(this.objects[i] == pipe.Top || this.objects[i] == this.objects[i].Bottom)
+        this.objects.splice(i,1);
+    }
+
+    this.CreatePipe(width / 4 + this.pipes.length * 400 + Pipe.GetWidth(), height / 2 + random(-1, 1) * 200, 200);
+
+  }
+
   //Handles drawing of objects
   Render() {
     background(51);
@@ -235,6 +265,7 @@ class Scene {
 
   //Handles physics
   Update(delta) {
+    this.OnUpdate();
     this.objects.forEach(gameObject => {
       if (gameObject.Update) {
         gameObject.Update(delta);
