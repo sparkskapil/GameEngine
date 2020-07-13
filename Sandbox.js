@@ -97,12 +97,21 @@ class Pipe extends KinematicObject2D {
     this.height = Pipe.GetHeight();
     const pipeStyle = new Sprite(AssetManager.GetLoadedImage('pipe'), this.width, this.height);
     this.SetDrawable(pipeStyle);
-    this.velocity = -100
+    this.speed = -100
+    this.started = false;
 
     if (!isTop) {
       this.SetRotation(PI);
     }
-    this.SetVelocity(this.velocity, 0);
+    this.SetVelocity(0, 0);
+  }
+
+  Update(delta) {
+    if (SceneManager.GetScene().started && this.velocity.x == 0)
+      this.SetVelocity(this.speed, 0);
+    if (SceneManager.GetScene().finished == true)
+      this.SetVelocity(0, 0);
+    super.Update(delta)
   }
 
 }
@@ -119,6 +128,10 @@ class Scene {
     this.objects = [];
     this.player = null;
     this.pipesCount = 5;
+    this.pipeGap = 350;
+    this.started = false;
+    this.finished = false;
+    this.score = 0;
   }
 
   AddToScene = (object) => {
@@ -191,7 +204,7 @@ class Scene {
 
   CreatePipes() {
     for (let i = 0; i < this.pipesCount; i++) {
-      this.CreatePipe(width / 4 + i * 400 + Pipe.GetWidth(), height / 2 + random(-1, 1) * 200, 200);
+      this.CreatePipe(width + i * this.pipeGap + Pipe.GetWidth(), height / 2 + random(-1, 1) * 200, 200);
     }
   }
 
@@ -233,7 +246,35 @@ class Scene {
     AssetManager.LoadAssets();
   }
 
-  OnUpdate() {
+  CalculateScore() {
+    // Get First pipe from game objects
+    let firstPipe = null;
+    for (let i = 0; i < this.objects.length; i++) {
+      if (this.objects[i] instanceof Pipe) {
+        firstPipe = this.objects[i];
+        break;
+      }
+    }
+
+    if (firstPipe == null)
+      return;
+
+    if (firstPipe.AddedToScore)
+      return;
+
+    if (firstPipe.GetPosition().x + firstPipe.width / 2 < this.player.GetPosition().x) {
+      ++this.score;
+      firstPipe.AddedToScore = true;
+    }
+    
+    if (this.lastScore != this.score) {
+      this.lastScore = this.score;
+      console.log(this.score);
+    }
+
+  }
+
+  HandleCreateAndCleanupOfPipes() {
     let pipes = [];
     for (let i = 0; i < this.objects.length; i++) {
       if ((this.objects[i] instanceof Pipe) == false)
@@ -255,7 +296,24 @@ class Scene {
         break;
       }
     }
-    this.CreatePipe(lastPipe.GetPosition().x + 400 + Pipe.GetWidth(), height / 2 + random(-1, 1) * 200, 200);
+    this.CreatePipe(lastPipe.GetPosition().x + this.pipeGap + Pipe.GetWidth(), height / 2 + random(-1, 1) * 200, 200);
+  }
+
+  OnUpdate() {
+    if (this.player.started == true) {
+      this.started = true;
+    }
+    if (this.player.dead == true) {
+      this.finished = true;
+      this.started = false;
+    }
+    if (this.player.started === false)
+      return
+
+    // Score can be calculated if the game has started
+    this.CalculateScore();
+
+    this.HandleCreateAndCleanupOfPipes()
   }
 
   //Handles drawing of objects
