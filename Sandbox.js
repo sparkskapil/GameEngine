@@ -41,11 +41,11 @@ class Player extends KinematicObject2D {
   }
 
   OnCollisionBegin = (objects) => {
-    this.dead = true;
     this.SetVelocity(0, 0);
     this.SetAcceleration(0, 0);
     this.SetAngularVelocity(0);
     this.Drawable.StopAnimation();
+    this.dead = true;
   }
 
   WhileColliding(objects) {
@@ -97,6 +97,10 @@ class Pipe extends KinematicObject2D {
     this.height = Pipe.GetHeight();
     const pipeStyle = new Sprite(AssetManager.GetLoadedImage('pipe'), this.width, this.height);
     this.SetDrawable(pipeStyle);
+
+    const collider = new BoxCollider2D(0, 0, this.width, this.height);
+    collider.Attach(this);
+
     this.speed = -100
     this.started = false;
 
@@ -266,7 +270,7 @@ class Scene {
       ++this.score;
       firstPipe.AddedToScore = true;
     }
-    
+
     if (this.lastScore != this.score) {
       this.lastScore = this.score;
       console.log(this.score);
