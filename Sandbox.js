@@ -5,6 +5,44 @@ class Player extends KinematicObject2D {
 
     this.started = false;
     this.dead = false;
+    const playerStyle = new AnimatedSprite(AssetManager.GetLoadedImage('bird'), 276, 64);
+
+    const frames = [
+      {
+        key: 'frame_0',
+        position: {
+          x: 0,
+          y: 0,
+          w: 91,
+          h: 64
+        }
+      },
+      {
+        key: 'frame_1',
+        position: {
+          x: 92,
+          y: 0,
+          w: 91,
+          h: 64
+        }
+      },
+      {
+        key: 'frame_2',
+        position: {
+          x: 184,
+          y: 0,
+          w: 91,
+          h: 64
+        }
+      }
+    ];
+    
+    playerStyle.SetFrames(frames);
+    playerStyle.SetAnimationSpeed(0.1);
+    const collider = new BoxCollider2D(0, 0, 50, 50);
+    collider.Attach(this);
+
+    this.SetDrawable(playerStyle);
   }
 
   Draw() {
@@ -165,43 +203,7 @@ class Scene {
 
   CreatePlayer() {
     const position = createVector(width / 4 + 150, height / 2);
-    const playerStyle = new AnimatedSprite(AssetManager.GetLoadedImage('bird'), 276, 64);
-    const frames = [
-      {
-        key: 'frame_0',
-        position: {
-          x: 0,
-          y: 0,
-          w: 91,
-          h: 64
-        }
-      },
-      {
-        key: 'frame_1',
-        position: {
-          x: 92,
-          y: 0,
-          w: 91,
-          h: 64
-        }
-      },
-      {
-        key: 'frame_2',
-        position: {
-          x: 184,
-          y: 0,
-          w: 91,
-          h: 64
-        }
-      }
-    ];
-    playerStyle.SetFrames(frames);
-    playerStyle.SetAnimationSpeed(0.1);
     this.player = new Player(0, 0);
-    const collider = new BoxCollider2D(0, 0, 50, 50);
-    collider.Attach(this.player);
-
-    this.player.SetDrawable(playerStyle);
     this.player.SetPosition(position);
     this.AddToScene(this.player);
   }
