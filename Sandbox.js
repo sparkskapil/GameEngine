@@ -36,7 +36,7 @@ class Player extends KinematicObject2D {
         }
       }
     ];
-    
+
     playerStyle.SetFrames(frames);
     playerStyle.SetAnimationSpeed(0.1);
     const collider = new BoxCollider2D(0, 0, 50, 50);
@@ -164,6 +164,24 @@ class Background extends GameObject2D {
   }
 }
 
+class Score extends GameObject2D {
+  constructor(x, y, initialScore) {
+    super(x, y)
+    this.score = initialScore;
+    this.scoreLabel = new Label(this.score.toString(), 50)
+    this.SetDrawable(this.scoreLabel);
+  }
+
+  UpdateScore(score = null) {
+    if (score == null)
+      this.score++;
+    else
+      this.score = score
+    this.scoreLabel.SetText(this.score);
+  }
+
+}
+
 class Scene {
   constructor() {
     this.count = 0;
@@ -173,7 +191,7 @@ class Scene {
     this.pipeGap = 350;
     this.started = false;
     this.finished = false;
-    this.score = 0;
+    this.score = null;
   }
 
   AddToScene = (object) => {
@@ -242,6 +260,9 @@ class Scene {
     const wallBottom = new Wall(width / 2, height - 5);
     wallBottom.SetCollisionProps(width * 2, 50);
     wallBottom.SetName('BOTTOMWALL');
+
+    this.score = new Score(this.player.x, 100, 0);
+    this.AddToScene(this.score)
   }
 
   LoadAssets() {
@@ -269,13 +290,12 @@ class Scene {
       return;
 
     if (firstPipe.GetPosition().x + firstPipe.width / 2 < this.player.GetPosition().x) {
-      ++this.score;
+      this.score.UpdateScore();
       firstPipe.AddedToScore = true;
     }
 
     if (this.lastScore != this.score) {
       this.lastScore = this.score;
-      console.log(this.score);
     }
 
   }

@@ -452,6 +452,33 @@ class Sprite extends Drawable {
   }
 }
 
+class Label extends Drawable {
+  constructor(text, fontSize) {
+    super();
+    this.fontSize = fontSize;
+    this.text = text;
+    this.color = color(255, 255, 255)
+  }
+  SetText(text) {
+    this.text = text;
+  }
+  GetText() {
+    return this.text;
+  }
+
+  SetColor(R, G, B, A) {
+    this.color = color(R, G, B, A);
+  }
+
+  Draw() {
+    push();
+    fill(this.color);
+    textSize(this.fontSize);
+    text(this.text, 0, 0);
+    pop();
+  }
+}
+
 class AnimatedSprite extends Drawable {
   constructor(loadedImage, width, height) {
     super();
