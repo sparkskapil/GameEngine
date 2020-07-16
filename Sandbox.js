@@ -139,7 +139,7 @@ class Pipe extends KinematicObject2D {
     const collider = new BoxCollider2D(0, 0, this.width, this.height);
     collider.Attach(this);
 
-    this.speed = -100
+    this.speed = -200
     this.started = false;
 
     if (!isTop) {
@@ -168,7 +168,7 @@ class Score extends GameObject2D {
   constructor(x, y, initialScore) {
     super(x, y)
     this.score = initialScore;
-    this.scoreLabel = new Label(this.score.toString(), 50)
+    this.scoreLabel = new Label(this.score.toString(), 72);
     this.SetDrawable(this.scoreLabel);
   }
 
@@ -315,14 +315,32 @@ class Scene {
       this.RemoveFromScene(pipes[i])
     }
 
-    let lastPipe = null;
+    let index = null;
     for (let i = this.objects.length - 1; i >= 0; i--) {
       if (this.objects[i] instanceof Pipe) {
-        lastPipe = this.objects[i];
+        index = i;
         break;
       }
     }
-    this.CreatePipe(lastPipe.GetPosition().x + this.pipeGap + Pipe.GetWidth(), height / 2 + random(-1, 1) * 200, 200);
+    const lastPipe = this.objects[index];
+    const secondLastPipe = this.objects[index - 3];
+    const X = 2 * lastPipe.GetPosition().x - secondLastPipe.GetPosition().x;
+    this.CreatePipe(X, height / 2 + random(-1, 1) * 200, 200);
+    this.SortSceneObjects();
+  }
+
+  SortSceneObjects() {
+    let playerIndex = -1;
+    let scoreIndex = -1;
+    for (let i = 0; i < this.objects.length; i++) {
+      if (this.objects[i] instanceof Player)
+        playerIndex = i;
+      else if (this.objects[i] instanceof Score)
+        scoreIndex = i;
+    }
+
+    this.objects.push(this.objects.splice(playerIndex, 1)[0]);
+    this.objects.push(this.objects.splice(scoreIndex, 1)[0]);
   }
 
   OnUpdate() {
@@ -339,7 +357,11 @@ class Scene {
     // Score can be calculated if the game has started
     this.CalculateScore();
 
-    this.HandleCreateAndCleanupOfPipes()
+    this.HandleCreateAndCleanupOfPipes();
+
+    // Move Score label to the last of Objects array
+    this.RemoveFromScene(this.score);
+    this.AddToScene(this.score);
   }
 
   //Handles drawing of objects
