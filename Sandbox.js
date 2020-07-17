@@ -185,27 +185,35 @@ class Score extends GameObject2D {
 class Scene {
   constructor() {
     this.count = 0;
-    this.objects = [];
+    this.objects = {};
     this.player = null;
     this.pipesCount = 5;
     this.pipeGap = 350;
     this.started = false;
     this.finished = false;
     this.score = null;
+
+    this.BG_LAYER = 1;
+    this.PIPE_LAYER = 2;
+    this.PLAYER_LAYER = 3;
   }
 
-  AddToScene = (object) => {
-    this.objects.push(object);
+  AddToScene = (object, layer = 'default') => {
+    if (!this.objects[layer]) {
+      this.objects[layer] = []
+    }
+    this.objects[layer].push(object);
   }
 
   RemoveFromScene = (object) => {
-    const index = this.objects.findIndex(obj => object.GetName() === obj.GetName())
-    this.objects.splice(index, 1);
+    Object.keys(this.objects).forEach((key) => {
+      this.objects[key] = this.objects[key].filter((obj) => { return obj.GetName() != object.GetName(); })
+    });
   }
 
   // Method will reset the current scene to original
   ResetScene() {
-    this.objects = [];
+    this.objects = {};
     this.CreateScene();
   }
 
@@ -216,14 +224,14 @@ class Scene {
 
     background.SetDrawable(backgroundImage);
     background.SetPosition(position);
-    this.AddToScene(background);
+    this.AddToScene(background, this.BG_LAYER);
   }
 
   CreatePlayer() {
     const position = createVector(width / 4 + 150, height / 2);
     this.player = new Player(0, 0);
     this.player.SetPosition(position);
-    this.AddToScene(this.player);
+    this.AddToScene(this.player, this.PLAYER_LAYER);
   }
 
   CreatePipes() {
@@ -238,8 +246,8 @@ class Scene {
 
     pipeTop.SetPosition(x, y - Pipe.GetHeight() / 2 - gap / 2);
     pipeBottom.SetPosition(x, y + Pipe.GetHeight() / 2 + gap / 2);
-    this.AddToScene(pipeTop);
-    this.AddToScene(pipeBottom);
+    this.AddToScene(pipeTop, this.PIPE_LAYER);
+    this.AddToScene(pipeBottom, this.PIPE_LAYER);
   }
 
   IsPipeOffscreen(pipe) {
@@ -262,7 +270,7 @@ class Scene {
     wallBottom.SetName('BOTTOMWALL');
 
     this.score = new Score(this.player.x, 100, 0);
-    this.AddToScene(this.score)
+    this.AddToScene(this.score, this.PLAYER_LAYER)
   }
 
   LoadAssets() {
@@ -275,10 +283,12 @@ class Scene {
 
   CalculateScore() {
     // Get First pipe from game objects
+    const pipes = this.objects[this.PIPE_LAYER];
+
     let firstPipe = null;
-    for (let i = 0; i < this.objects.length; i++) {
-      if (this.objects[i] instanceof Pipe) {
-        firstPipe = this.objects[i];
+    for (let i = 0; i < pipes.length; i++) {
+      if (pipes[i] instanceof Pipe) {
+        firstPipe = pipes[i];
         break;
       }
     }
@@ -301,46 +311,17 @@ class Scene {
   }
 
   HandleCreateAndCleanupOfPipes() {
-    let pipes = [];
-    for (let i = 0; i < this.objects.length; i++) {
-      if ((this.objects[i] instanceof Pipe) == false)
-        continue;
-      if (this.IsPipeOffscreen(this.objects[i])) {
-        pipes.push(this.objects[i]);
-      }
-    }
-    if (!pipes.length) return;
+    const pipesToRemove = this.objects[this.PIPE_LAYER].filter(pipe => { return this.IsPipeOffscreen(pipe) });
+    if (pipesToRemove.length == 0) return;
+    pipesToRemove.forEach(pipe => this.RemoveFromScene(pipe));
 
-    for (let i = 0; i < pipes.length; i++) {
-      this.RemoveFromScene(pipes[i])
-    }
+    const count = this.objects[this.PIPE_LAYER].length;
+    let index = count - 1;
 
-    let index = null;
-    for (let i = this.objects.length - 1; i >= 0; i--) {
-      if (this.objects[i] instanceof Pipe) {
-        index = i;
-        break;
-      }
-    }
-    const lastPipe = this.objects[index];
-    const secondLastPipe = this.objects[index - 3];
+    const lastPipe = this.objects[this.PIPE_LAYER][index];
+    const secondLastPipe = this.objects[this.PIPE_LAYER][index - 3];
     const X = 2 * lastPipe.GetPosition().x - secondLastPipe.GetPosition().x;
     this.CreatePipe(X, height / 2 + random(-1, 1) * 200, 200);
-    this.SortSceneObjects();
-  }
-
-  SortSceneObjects() {
-    let playerIndex = -1;
-    let scoreIndex = -1;
-    for (let i = 0; i < this.objects.length; i++) {
-      if (this.objects[i] instanceof Player)
-        playerIndex = i;
-      else if (this.objects[i] instanceof Score)
-        scoreIndex = i;
-    }
-
-    this.objects.push(this.objects.splice(playerIndex, 1)[0]);
-    this.objects.push(this.objects.splice(scoreIndex, 1)[0]);
   }
 
   OnUpdate() {
@@ -358,37 +339,42 @@ class Scene {
     this.CalculateScore();
 
     this.HandleCreateAndCleanupOfPipes();
-
-    // Move Score label to the last of Objects array
-    this.RemoveFromScene(this.score);
-    this.AddToScene(this.score);
   }
 
   //Handles drawing of objects
   Render() {
-    background(51);
-    this.objects.forEach(gameObject => {
-      gameObject.Draw();
+    Object.keys(this.objects).forEach(layer => {
+      this.objects[layer].forEach(gameObject => {
+        if (gameObject.Draw) gameObject.Draw();
+      });
     });
   }
 
   //Handles physics
   Update(delta) {
     this.OnUpdate();
-    this.objects.forEach(gameObject => {
-      if (gameObject.Update) {
-        gameObject.Update(delta);
-      }
+    Object.keys(this.objects).forEach(layer => {
+      this.objects[layer].forEach(gameObject => {
+        if (gameObject.Update) gameObject.Update(delta);
+      });
     });
   }
 
   //KeyEvents
   KeyPressed(event) {
-    this.objects.forEach(gameObject => gameObject.KeyPressed ? gameObject.KeyPressed(event) : null);
+    Object.keys(this.objects).forEach(layer => {
+      this.objects[layer].forEach(gameObject => {
+        gameObject.KeyPressed ? gameObject.KeyPressed(event) : null;
+      });
+    });
   }
 
   KeyReleased(event) {
-    this.objects.forEach(gameObject => gameObject.keyReleased ? gameObject.KeyReleased(event) : null);
+    Object.keys(this.objects).forEach(layer => {
+      this.objects[layer].forEach(gameObject => {
+        gameObject.KeyPressed ? gameObject.KeyReleased(event) : null;
+      });
+    });
   }
 }
 
