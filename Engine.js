@@ -535,6 +535,38 @@ class AnimatedSprite extends Drawable {
   }
 }
 
+class SpriteSheet {
+  constructor(loadedImage, w, h) {
+    this.sheet = loadedImage;
+    this.blockWidth = w;
+    this.blockHeight = h;
+    this.sprites = {};
+  }
+
+  _setImage(key, image) {
+    if (key in this.sprites) {
+      throw "Key already exists.";
+    }
+    this.sprites[key] = image;
+  }
+
+  SetImage(key, row, column, sizeX, sizeY) {
+    const x = column * this.blockWidth;
+    const y = row * this.blockHeight;
+    const sprite = this.sheet.get(x, y, sizeX * this.blockWidth, sizeY * this.blockHeight);
+    this._setImage(key, sprite);
+  }
+  
+  SetImageByPixel(key, startX, startY, sizeX, sizeY) {
+    const sprite = this.sheet.get(startX, startY, sizeX, sizeY);
+    this._setImage(key, sprite);
+  }
+
+  GetImage(key) {
+    return this.sprites[key];
+  }
+}
+
 class Box2D extends Drawable {
   constructor(width, height) {
     super();

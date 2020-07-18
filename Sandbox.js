@@ -274,10 +274,10 @@ class Scene {
   }
 
   LoadAssets() {
-    AssetManager.ImportImage('player', './assets/flappy.png');
     AssetManager.ImportImage('bird', './assets/bird.png');
     AssetManager.ImportImage('background', './assets/background.png');
     AssetManager.ImportImage('pipe', './assets/pipe.png');
+    AssetManager.ImportImage('spritesheet', './assets/spritesheet.png');
     AssetManager.LoadAssets();
   }
 
