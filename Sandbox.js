@@ -62,7 +62,10 @@ class Player extends KinematicObject2D {
 
     if (!this.started)
       return;
-
+    
+    if (this.GetPosition().y < 0)
+      this.SetPosition(this.GetPosition().x, 0);
+    
     if (this.velocity.y > 0)
       this.SetRotation(PI / 6);
     else if (this.velocity.y < 0)
@@ -219,7 +222,8 @@ class Scene {
 
   CreateBG() {
     const position = createVector(width / 2, height / 2);
-    const backgroundImage = new Sprite(AssetManager.GetLoadedImage('background'), width, height);
+    const bgSprite = AssetManager.GetLoadedImage('background');
+    const backgroundImage = new Sprite(bgSprite, width, height);
     const background = new Background(0, 0);
 
     background.SetDrawable(backgroundImage);
@@ -285,13 +289,7 @@ class Scene {
     // Get First pipe from game objects
     const pipes = this.objects[this.PIPE_LAYER];
 
-    let firstPipe = null;
-    for (let i = 0; i < pipes.length; i++) {
-      if (pipes[i] instanceof Pipe) {
-        firstPipe = pipes[i];
-        break;
-      }
-    }
+    let firstPipe = pipes[0];
 
     if (firstPipe == null)
       return;
@@ -303,11 +301,6 @@ class Scene {
       this.score.UpdateScore();
       firstPipe.AddedToScore = true;
     }
-
-    if (this.lastScore != this.score) {
-      this.lastScore = this.score;
-    }
-
   }
 
   HandleCreateAndCleanupOfPipes() {
@@ -343,38 +336,63 @@ class Scene {
 
   //Handles drawing of objects
   Render() {
-    Object.keys(this.objects).forEach(layer => {
-      this.objects[layer].forEach(gameObject => {
-        if (gameObject.Draw) gameObject.Draw();
-      });
-    });
+    const layers = Object.keys(this.objects);
+
+    const renderLayer = gameObjects => {
+      for (let i = 0; i < gameObjects.length; i++)
+        if (gameObjects[i].Draw) gameObjects[i].Draw();
+    };
+
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      renderLayer(this.objects[layer]);
+    }
   }
 
   //Handles physics
   Update(delta) {
     this.OnUpdate();
-    Object.keys(this.objects).forEach(layer => {
-      this.objects[layer].forEach(gameObject => {
-        if (gameObject.Update) gameObject.Update(delta);
-      });
-    });
+    const layers = Object.keys(this.objects);
+
+    const updateLayer = gameObjects => {
+      for (let i = 0; i < gameObjects.length; i++)
+        if (gameObjects[i].Update) gameObjects[i].Update(delta);
+    };
+
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      updateLayer(this.objects[layer]);
+    }
+    
   }
 
   //KeyEvents
   KeyPressed(event) {
-    Object.keys(this.objects).forEach(layer => {
-      this.objects[layer].forEach(gameObject => {
-        gameObject.KeyPressed ? gameObject.KeyPressed(event) : null;
-      });
-    });
+    const layers = Object.keys(this.objects);
+
+    const keyPressedEvent = gameObjects => {
+      for (let i = 0; i < gameObjects.length; i++)
+        gameObjects[i].KeyPressed ? gameObjects[i].KeyPressed(event) : null;
+    };
+
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      keyPressedEvent(this.objects[layer]);
+    }
   }
 
   KeyReleased(event) {
-    Object.keys(this.objects).forEach(layer => {
-      this.objects[layer].forEach(gameObject => {
-        gameObject.KeyPressed ? gameObject.KeyReleased(event) : null;
-      });
-    });
+    const layers = Object.keys(this.objects);
+
+    const keyReleasedEvent = gameObjects => {
+      for (let i = 0; i < gameObjects.length; i++)
+        gameObjects[i].KeyReleased ? gameObjects[i].KeyReleased(event) : null;
+    };
+
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      keyReleasedEvent(this.objects[layer]);
+    }
   }
 }
 
