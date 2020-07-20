@@ -1,7 +1,7 @@
 class Player extends KinematicObject2D {
   constructor(x, y) {
     super(x, y);
-    this.SetVelocity(0, 50);
+    this.SetVelocity(0, 25);
 
     this.started = false;
     this.dead = false;
@@ -38,7 +38,7 @@ class Player extends KinematicObject2D {
     ];
 
     playerStyle.SetFrames(frames);
-    playerStyle.SetAnimationSpeed(0.1);
+    playerStyle.SetAnimationSpeed(0.05);
     const collider = new BoxCollider2D(0, 0, 50, 50);
     collider.Attach(this);
 
@@ -62,10 +62,10 @@ class Player extends KinematicObject2D {
 
     if (!this.started)
       return;
-    
+
     if (this.GetPosition().y < 0)
       this.SetPosition(this.GetPosition().x, 0);
-    
+
     if (this.velocity.y > 0)
       this.SetRotation(PI / 6);
     else if (this.velocity.y < 0)
@@ -97,12 +97,15 @@ class Player extends KinematicObject2D {
 
   KeyPressed(event) {
     //Game started
+    if (event.key !== " " && event.key !== "ArrowUp")
+      return;
+
     if (!this.started && !this.dead) {
       this.started = true;
-      this.SetAcceleration(0, 800);
+      this.SetAcceleration(0, 400);
     }
     if (!this.dead)
-      this.SetVelocity(0, -400);
+      this.SetVelocity(0, -300);
   }
 
   KeyReleased(event) {
@@ -142,7 +145,7 @@ class Pipe extends KinematicObject2D {
     const collider = new BoxCollider2D(0, 0, this.width, this.height);
     collider.Attach(this);
 
-    this.speed = -200
+    this.speed = -100;
     this.started = false;
 
     if (!isTop) {
@@ -196,14 +199,17 @@ class Scene {
     this.finished = false;
     this.score = null;
 
+    this.layerIds = [];
     this.BG_LAYER = 1;
     this.PIPE_LAYER = 2;
     this.PLAYER_LAYER = 3;
+
   }
 
   AddToScene = (object, layer = 'default') => {
     if (!this.objects[layer]) {
       this.objects[layer] = []
+      this.layerIds.push(layer);
     }
     this.objects[layer].push(object);
   }
@@ -336,7 +342,7 @@ class Scene {
 
   //Handles drawing of objects
   Render() {
-    const layers = Object.keys(this.objects);
+    const layers = this.layerIds;
 
     const renderLayer = gameObjects => {
       for (let i = 0; i < gameObjects.length; i++)
@@ -352,23 +358,23 @@ class Scene {
   //Handles physics
   Update(delta) {
     this.OnUpdate();
-    const layers = Object.keys(this.objects);
+    const layers = this.layerIds;
 
-    const updateLayer = gameObjects => {
+    const updateLayer = (gameObjects, ts) => {
       for (let i = 0; i < gameObjects.length; i++)
-        if (gameObjects[i].Update) gameObjects[i].Update(delta);
+        if (gameObjects[i].Update) gameObjects[i].Update(ts);
     };
 
     for (let i = 0; i < layers.length; i++) {
       const layer = layers[i];
-      updateLayer(this.objects[layer]);
+      updateLayer(this.objects[layer], delta);
     }
-    
+
   }
 
   //KeyEvents
   KeyPressed(event) {
-    const layers = Object.keys(this.objects);
+    const layers = this.layerIds;
 
     const keyPressedEvent = gameObjects => {
       for (let i = 0; i < gameObjects.length; i++)
@@ -382,7 +388,7 @@ class Scene {
   }
 
   KeyReleased(event) {
-    const layers = Object.keys(this.objects);
+    const layers = this.layerIds;
 
     const keyReleasedEvent = gameObjects => {
       for (let i = 0; i < gameObjects.length; i++)
