@@ -1,196 +1,5 @@
-class Player extends KinematicObject2D {
-  constructor(x, y) {
-    super(x, y);
-    this.SetVelocity(0, 25);
-
-    this.started = false;
-    this.dead = false;
-    const playerStyle = new AnimatedSprite(AssetManager.GetLoadedImage('bird'), 276, 64);
-
-    const frames = [
-      {
-        key: 'frame_0',
-        position: {
-          x: 0,
-          y: 0,
-          w: 91,
-          h: 64
-        }
-      },
-      {
-        key: 'frame_1',
-        position: {
-          x: 92,
-          y: 0,
-          w: 91,
-          h: 64
-        }
-      },
-      {
-        key: 'frame_2',
-        position: {
-          x: 184,
-          y: 0,
-          w: 91,
-          h: 64
-        }
-      }
-    ];
-
-    playerStyle.SetFrames(frames);
-    playerStyle.SetAnimationSpeed(0.05);
-    const collider = new BoxCollider2D(0, 0, 50, 50);
-    collider.Attach(this);
-
-    this.SetDrawable(playerStyle);
-  }
-
-  Draw() {
-    super.Draw();
-  }
-
-  Update(delta) {
-    super.Update(delta);
-
-    // oscillate bird when game is not started
-    if (!this.basePosition)
-      this.basePosition = createVector(this.x, this.y);
-    if (!this.started && !this.dead) {
-      if (Math.abs(this.y - this.basePosition.y) > 15)
-        this.velocity.y = this.velocity.y * -1;
-    }
-
-    if (!this.started)
-      return;
-
-    if (this.GetPosition().y < 0)
-      this.SetPosition(this.GetPosition().x, 0);
-
-    if (this.velocity.y > 0)
-      this.SetRotation(PI / 6);
-    else if (this.velocity.y < 0)
-      this.SetRotation(-PI / 3);
-  }
-
-  IsDead() {
-    return this.dead;
-  }
-
-  Restart() {
-    this.dead = false;
-    this.started = false;
-  }
-
-  OnCollisionBegin = (objects) => {
-    this.SetVelocity(0, 0);
-    this.SetAcceleration(0, 0);
-    this.SetAngularVelocity(0);
-    this.Drawable.StopAnimation();
-    this.dead = true;
-  }
-
-  WhileColliding(objects) {
-  }
-
-  OnCollisionEnd(objects) {
-  }
-
-  KeyPressed(event) {
-    //Game started
-    if (event.key !== " " && event.key !== "ArrowUp")
-      return;
-
-    if (!this.started && !this.dead) {
-      this.started = true;
-      this.SetAcceleration(0, 400);
-    }
-    if (!this.dead)
-      this.SetVelocity(0, -300);
-  }
-
-  KeyReleased(event) {
-
-  }
-
-}
-
-class Wall extends GameObject2D {
-  constructor(x, y) {
-    super(x, y);
-  }
-
-  SetCollisionProps(W, H) {
-    const collider = new BoxCollider2D(0, 0, W, H);
-    collider.Attach(this);
-  }
-}
-
-class Pipe extends KinematicObject2D {
-
-  static GetWidth() {
-    return 100;
-  }
-
-  static GetHeight() {
-    return 3 * height / 4;
-  }
-
-  constructor(x, y, isTop) {
-    super(x, y);
-    this.width = Pipe.GetWidth();
-    this.height = Pipe.GetHeight();
-    const pipeStyle = new Sprite(AssetManager.GetLoadedImage('pipe'), this.width, this.height);
-    this.SetDrawable(pipeStyle);
-
-    const collider = new BoxCollider2D(0, 0, this.width, this.height);
-    collider.Attach(this);
-
-    this.speed = -100;
-    this.started = false;
-
-    if (!isTop) {
-      this.SetRotation(PI);
-    }
-    this.SetVelocity(0, 0);
-  }
-
-  Update(delta) {
-    if (SceneManager.GetScene().started && this.velocity.x == 0)
-      this.SetVelocity(this.speed, 0);
-    if (SceneManager.GetScene().finished == true)
-      this.SetVelocity(0, 0);
-    super.Update(delta)
-  }
-
-}
-
-class Background extends GameObject2D {
-  constructor(x, y) {
-    super(x, y);
-  }
-}
-
-class Score extends GameObject2D {
-  constructor(x, y, initialScore) {
-    super(x, y)
-    this.score = initialScore;
-    this.scoreLabel = new Label(this.score.toString(), 72);
-    this.SetDrawable(this.scoreLabel);
-  }
-
-  UpdateScore(score = null) {
-    if (score == null)
-      this.score++;
-    else
-      this.score = score
-    this.scoreLabel.SetText(this.score);
-  }
-
-}
-
-class Scene {
+class Game {
   constructor() {
-    this.count = 0;
     this.objects = {};
     this.player = null;
     this.pipesCount = 5;
@@ -227,20 +36,12 @@ class Scene {
   }
 
   CreateBG() {
-    const position = createVector(width / 2, height / 2);
-    const bgSprite = AssetManager.GetLoadedImage('background');
-    const backgroundImage = new Sprite(bgSprite, width, height);
-    const background = new Background(0, 0);
-
-    background.SetDrawable(backgroundImage);
-    background.SetPosition(position);
+    const background = new Background();
     this.AddToScene(background, this.BG_LAYER);
   }
 
   CreatePlayer() {
-    const position = createVector(width / 4 + 150, height / 2);
-    this.player = new Player(0, 0);
-    this.player.SetPosition(position);
+    this.player = new Player();
     this.AddToScene(this.player, this.PLAYER_LAYER);
   }
 
@@ -330,6 +131,7 @@ class Scene {
     if (this.player.dead == true) {
       this.finished = true;
       this.started = false;
+      SceneManager.SetScene('GameOver');
     }
     if (this.player.started === false)
       return
@@ -402,5 +204,210 @@ class Scene {
   }
 }
 
-SceneManager.AddScene("MainScene", new Scene());
+class MainMenu {
+  constructor() {
+    this.objects = {};
+
+    this.layerIds = [];
+    this.BG_LAYER = 1;
+    this.MENU_LAYER = 2;
+  }
+
+  AddToScene = (object, layer = 'default') => {
+    if (!this.objects[layer]) {
+      this.objects[layer] = []
+      this.layerIds.push(layer);
+    }
+    this.objects[layer].push(object);
+  }
+
+  RemoveFromScene = (object) => {
+    Object.keys(this.objects).forEach((key) => {
+      this.objects[key] = this.objects[key].filter((obj) => { return obj.GetName() != object.GetName(); })
+    });
+  }
+
+  // Method will reset the current scene to original
+  ResetScene() {
+    this.objects = {};
+    this.CreateScene();
+  }
+
+  CreateScene() {
+
+    const background = new Background();
+    this.AddToScene(background, this.BG_LAYER);
+
+    const logo = new GameObject2D(width / 2, height / 2);
+    const logoImage = AssetManager.GetLoadedImage('logo');
+    const aspect = logoImage.width / logoImage.height;
+
+    const logoSprite = new Sprite(logoImage, width / 3, width / (3 * aspect));
+
+    logo.SetDrawable(logoSprite);
+    this.AddToScene(logo, this.MENU_LAYER);
+  }
+
+  LoadAssets() {
+    AssetManager.ImportImage('logo', 'assets/FlappyLogo.png');
+    AssetManager.LoadAssets();
+  }
+
+  //Handles drawing of objects
+  Render() {
+    const layers = this.layerIds;
+
+    const renderLayer = gameObjects => {
+      for (let i = 0; i < gameObjects.length; i++)
+        if (gameObjects[i].Draw) gameObjects[i].Draw();
+    };
+
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      renderLayer(this.objects[layer]);
+    }
+  }
+
+  //Handles physics
+  Update(delta) {
+  }
+
+  //KeyEvents
+  KeyPressed(event) {
+    if (event.key === " ")
+      SceneManager.SetScene("Game");
+  }
+}
+
+class GameOver {
+  constructor() {
+    this.objects = {};
+
+    this.layerIds = [];
+    this.BG_LAYER = 1;
+    this.MENU_LAYER = 2;
+
+    this.render = true;
+  }
+
+  AddToScene = (object, layer = 'default') => {
+    if (!this.objects[layer]) {
+      this.objects[layer] = []
+      this.layerIds.push(layer);
+    }
+    this.objects[layer].push(object);
+  }
+
+  RemoveFromScene = (object) => {
+    Object.keys(this.objects).forEach((key) => {
+      this.objects[key] = this.objects[key].filter((obj) => { return obj.GetName() != object.GetName(); })
+    });
+  }
+
+  // Method will reset the current scene to original
+  ResetScene() {
+    this.objects = {};
+    this.CreateScene();
+  }
+
+  CreateScene() {
+    const gameOver = new GameObject2D(width / 2, height / 3 - 10);
+    const gameOverImage = AssetManager.GetLoadedImage('gameover');
+    const aspect = gameOverImage.width / gameOverImage.height;
+
+    const gameOverSprite = new Sprite(gameOverImage, width / 3, width / (3 * aspect));
+
+    gameOver.SetDrawable(gameOverSprite);
+    this.AddToScene(gameOver, this.MENU_LAYER);
+
+    const Score = SceneManager.GetScene("Game").score.score;
+    let highscore = Score;
+    let gamesplayed = 1;
+    if (localStorage) {
+      const data = localStorage.getItem("FlappyBird");
+
+      if (!data) {
+        const gameData = {
+          count: 1,
+          maxscore: Score
+        };
+        localStorage.setItem("FlappyBird", JSON.stringify(gameData));
+      }
+      else {
+        const gameData = JSON.parse(data);
+        gameData.count++;
+        gameData.maxscore = max(gameData.maxscore, Score);
+        highscore = gameData.maxscore;
+        gamesplayed = gameData.count;
+        localStorage.setItem("FlappyBird", JSON.stringify(gameData));
+      }
+    }
+
+    const MenuBox = new GameObject2D(width / 2, height / 2 + 50);
+    const MenuBoxStyle = new Box2D(500, height / 3);
+    MenuBoxStyle.SetColor(221, 216, 148);
+    MenuBox.SetDrawable(MenuBoxStyle);
+
+    const lblCurrentScore = new Label("Score: " + Score, 36);
+    const lblHighScore = new Label("HighScore: " + highscore, 36);
+    const lblGamesPlayed = new Label("GamesPlayed: " + gamesplayed, 36);
+    const X = width / 3 + 125; const Y = height / 3 + 125;
+    const CurrentScore = new GameObject2D(X, Y);
+    lblCurrentScore.SetColor(232, 146, 64);
+    CurrentScore.SetDrawable(lblCurrentScore);
+    const HighScore = new GameObject2D(X, Y + 50);
+    lblHighScore.SetColor(232, 146, 64);
+    HighScore.SetDrawable(lblHighScore);
+    const GamesPlayed = new GameObject2D(X, Y + 100);
+    lblGamesPlayed.SetColor(232, 146, 64);
+    GamesPlayed.SetDrawable(lblGamesPlayed);
+
+    this.AddToScene(MenuBox, this.MENU_LAYER);
+    this.AddToScene(CurrentScore, this.MENU_LAYER);
+    this.AddToScene(HighScore, this.MENU_LAYER);
+    this.AddToScene(GamesPlayed, this.MENU_LAYER);
+
+    const lblRestart = new Label("Press ENTER to restart.", 24);
+    const Restart = new GameObject2D(X, Y + 150);
+    Restart.SetDrawable(lblRestart);
+    this.AddToScene(Restart);
+  }
+
+  LoadAssets() {
+    AssetManager.ImportImage('gameover', 'assets/GameOver.png');
+    AssetManager.LoadAssets();
+  }
+
+  //Handles drawing of objects
+  Render() {
+    if (this.render === false)
+      return;
+    const layers = this.layerIds;
+
+    const renderLayer = gameObjects => {
+      for (let i = 0; i < gameObjects.length; i++)
+        if (gameObjects[i].Draw) gameObjects[i].Draw();
+    };
+
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      renderLayer(this.objects[layer]);
+    }
+    this.render = false;
+  }
+
+  //Handles physics
+  Update(delta) {
+  }
+
+  //KeyEvents
+  KeyPressed(event) {
+    if (event.key === "Enter")
+      SceneManager.SetScene("MainScene");
+  }
+}
+
+SceneManager.AddScene("Game", new Game());
+SceneManager.AddScene("GameOver", new GameOver());
+SceneManager.AddScene("MainScene", new MainMenu());
 

@@ -5,8 +5,6 @@ function preload() {
 function setup() {
   createCanvas(windowWidth, windowHeight);
   PhysicsEngine = new PhysicsGlobal();
-
-  SceneManager.CreateScenes();
   SceneManager.SetScene("MainScene");
 }
 
@@ -21,10 +19,12 @@ function draw() {
 
 function keyPressed() {
   const Scene = SceneManager.GetScene();
-  Scene.KeyPressed({ key, keyCode });
+  if (Scene.KeyPressed)
+    Scene.KeyPressed({ key, keyCode });
 }
 
 function keyReleased() {
   const Scene = SceneManager.GetScene();
-  Scene.KeyReleased({ key, keyCode });
+  if (Scene.KeyReleased)
+    Scene.KeyReleased({ key, keyCode });
 }

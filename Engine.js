@@ -556,7 +556,7 @@ class SpriteSheet {
     const sprite = this.sheet.get(x, y, sizeX * this.blockWidth, sizeY * this.blockHeight);
     this._setImage(key, sprite);
   }
-  
+
   SetImageByPixel(key, startX, startY, sizeX, sizeY) {
     const sprite = this.sheet.get(startX, startY, sizeX, sizeY);
     this._setImage(key, sprite);
@@ -937,7 +937,10 @@ class SceneManager {
       });
   }
 
-  static GetScene() {
-    return SceneManager.CurrentScene;
+  static GetScene(key = null) {
+    if (key == null)
+      return SceneManager.CurrentScene;
+    else
+      return SceneManager.Scenes[key];
   }
 }
