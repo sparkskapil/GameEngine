@@ -1,13 +1,7 @@
 class Game {
   constructor() {
     this.objects = {};
-    this.player = null;
-    this.pipesCount = 5;
-    this.pipeGap = 350;
-    this.started = false;
-    this.finished = false;
-    this.score = null;
-
+    this.Paused = false;
     this.layerIds = [];
     this.BG_LAYER = 1;
     this.PIPE_LAYER = 2;
@@ -24,6 +18,7 @@ class Game {
   }
 
   RemoveFromScene = (object) => {
+    object.OnDelete();
     Object.keys(this.objects).forEach((key) => {
       this.objects[key] = this.objects[key].filter((obj) => { return obj.GetName() != object.GetName(); })
     });
@@ -72,6 +67,13 @@ class Game {
   }
 
   CreateScene() {
+    this.player = null;
+    this.pipesCount = 5;
+    this.pipeGap = 350;
+    this.started = false;
+    this.finished = false;
+    this.score = null;
+
     this.CreateBG();
     this.CreatePipes();
     this.CreatePlayer();
@@ -159,6 +161,9 @@ class Game {
 
   //Handles physics
   Update(delta) {
+    if (this.Paused)
+      return;
+
     this.OnUpdate();
     const layers = this.layerIds;
 
@@ -403,7 +408,7 @@ class GameOver {
   //KeyEvents
   KeyPressed(event) {
     if (event.key === "Enter")
-      SceneManager.SetScene("MainScene");
+      document.location.reload(true)
   }
 }
 

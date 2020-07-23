@@ -106,6 +106,8 @@ class Player extends KinematicObject2D {
   }
 
   KeyPressed(event) {
+    if (event.key === "Escape")
+      SceneManager.GetScene().Paused = !SceneManager.GetScene().Paused;
     //Game started
     if (event.key !== " " && event.key !== "ArrowUp")
       return;

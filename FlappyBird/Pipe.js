@@ -16,6 +16,7 @@ class Pipe extends KinematicObject2D {
     this.SetDrawable(pipeStyle);
 
     const collider = new BoxCollider2D(0, 0, this.width, this.height);
+    collider.isStatic = true;
     collider.Attach(this);
 
     this.speed = -200;
@@ -33,6 +34,10 @@ class Pipe extends KinematicObject2D {
     if (SceneManager.GetScene().finished == true)
       this.SetVelocity(0, 0);
     super.Update(delta)
+  }
+
+  OnDelete() {
+    PhysicsEngine.RemoveCollider(this);
   }
 
 }

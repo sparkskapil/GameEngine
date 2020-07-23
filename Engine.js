@@ -104,6 +104,7 @@ class PhysicsGlobal {
 
   Clear() {
     this.CollidersMap = {};
+    this.CollidingBodies = {};
     PhysicsGlobal.COLLIDERS = 0;
   }
 
@@ -113,6 +114,18 @@ class PhysicsGlobal {
     if (!this.CollidersMap[layer])
       this.CollidersMap[layer] = {};
     this.CollidersMap[layer][collider.id] = collider;
+  }
+
+  RemoveCollider(object) {
+    Object.keys(this.CollidersMap).forEach(layer => {
+      Object.keys(this.CollidersMap[layer]).forEach(id => {
+        const obj = this.CollidersMap[layer][id].gameObject;
+        if (object.Name === obj.Name) {
+          delete this.CollidersMap[layer][id];
+          return;
+        }
+      });
+    });
   }
 
   ComputeAndNotifyCollisions() {
@@ -417,6 +430,9 @@ class GameObject {
     throw new Error('Method not implemented.');
   }
 
+  OnDelete() {
+    //Its okay to have unimplemented OnDelete method.
+  }
 }
 
 class Drawable {
@@ -916,11 +932,11 @@ class SceneManager {
     if (!SceneManager.Scenes[key])
       throw new Error(`${key} does not exist.`);
 
+      if (PhysicsEngine) {
+        PhysicsEngine.Clear();
+      }
     SceneManager.CurrentScene = SceneManager.Scenes[key];
-    if (PhysicsEngine) {
-      PhysicsEngine.Clear();
-      SceneManager.CurrentScene.ResetScene();
-    }
+    SceneManager.CurrentScene.ResetScene();
   }
 
   static LoadAssets() {

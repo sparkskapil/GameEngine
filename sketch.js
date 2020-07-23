@@ -9,12 +9,12 @@ function setup() {
 }
 
 function draw() {
-  const Scene = SceneManager.GetScene();
-  if (!Scene)
+  const curScene = SceneManager.GetScene();
+  if (!curScene)
     throw new Error('No Scene was set to render.');
-  Scene.Render();
+  curScene.Render();
   PhysicsEngine.ComputeAndNotifyCollisions();
-  Scene.Update(deltaTime / 1000);
+  curScene.Update(deltaTime / 1000);
 }
 
 function keyPressed() {
