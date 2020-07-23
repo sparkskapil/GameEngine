@@ -82,7 +82,7 @@ class Game {
     wallBottom.SetCollisionProps(width * 2, 50);
     wallBottom.SetName('BOTTOMWALL');
 
-    this.score = new Score(this.player.x, 100, 0);
+    this.score = new Score(width / 2, 100, 0);
     this.AddToScene(this.score, this.PLAYER_LAYER)
   }
 
